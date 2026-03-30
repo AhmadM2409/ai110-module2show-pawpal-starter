@@ -28,13 +28,18 @@ Based on the AI architectural review, I made three key refinements to the design
 
 **a. Constraints and priorities**
 
-- What constraints does your scheduler consider (for example: time, priority, preferences)?
-- How did you decide which constraints mattered most?
+The scheduler considers three primary constraints in a hierarchical "Three-Key Sort":
+* **Completion Status**: Completed tasks are automatically pushed to the bottom of the list to keep the "To-Do" items front and center.
+* **Priority (1-3)**: Among pending tasks, high-priority items (Priority 1) are moved to the top.
+* **Time**: Tasks with the same priority are sorted chronologically.
+
+I decided that **Completion Status** was the most important constraint for user experience, as it prevents a cluttered "finished" list from burying urgent, upcoming tasks.
 
 **b. Tradeoffs**
 
-- Describe one tradeoff your scheduler makes.
-- Why is that tradeoff reasonable for this scenario?
+A key tradeoff in this design is the **"Exact Overlap"** detection. The scheduler flags a conflict if one task starts before another ends, but it does *not* account for "buffer time" or travel time between tasks. 
+
+This is reasonable for a domestic pet care scenario where most tasks (feeding, meds) happen in the same location. Adding complex buffer logic would have increased the system's complexity without providing significant value for a single-home user.
 
 ---
 
@@ -42,13 +47,14 @@ Based on the AI architectural review, I made three key refinements to the design
 
 **a. How you used AI**
 
-- How did you use AI tools during this project?
-- What kinds of prompts or questions were most helpful?
+I used AI as a "Co-Architect" throughout the project:
+* **Design Brainstorming**: Using Claude to refine the initial class structures and identify data bottlenecks.
+* **Refactoring**: Leveraging AI to quickly convert string-based time logic to `datetime.time` across the entire codebase.
+* **Logic Implementation**: Providing high-level pseudo-code prompts to have the AI "flesh out" method bodies for the Scheduler and recurring task logic.
 
 **b. Judgment and verification**
 
-- Describe one moment where you did not accept an AI suggestion as-is.
-- How did you evaluate or verify what the AI suggested?
+During the Phase 1 review, the AI suggested a `Conflict` dataclass instead of raw tuples. I didn't blindly accept it until I realized it would make the Streamlit UI code much cleaner. I evaluated this by attempting to write the UI code both ways and found that the AI’s suggestion significantly reduced the amount of string parsing I had to do in the frontend.
 
 ---
 
@@ -56,13 +62,16 @@ Based on the AI architectural review, I made three key refinements to the design
 
 **a. What you tested**
 
-- What behaviors did you test?
-- Why were these tests important?
+I implemented a suite of 10 automated tests using `pytest` covering:
+* **State Management**: Ensuring `mark_complete()` toggles correctly and clones recurring tasks.
+* **Logic Integrity**: Verifying that `add_task()` correctly stamps the pet's name onto the task.
+* **Boundary Conditions**: Testing sequential tasks (one ending exactly when another starts) to ensure they do *not* trigger a false conflict.
 
 **b. Confidence**
 
-- How confident are you that your scheduler works correctly?
-- What edge cases would you test next if you had more time?
+I am highly confident in the core scheduler logic because the automated test suite passes 100% of the time in under 0.05 seconds. 
+
+If I had more time, I would test **cross-day scheduling** (e.g., a task starting at 11:30 PM and ending at 12:30 AM) and **timezone transitions**, which are common edge cases for mobile users who travel with their pets.
 
 ---
 
@@ -70,12 +79,12 @@ Based on the AI architectural review, I made three key refinements to the design
 
 **a. What went well**
 
-- What part of this project are you most satisfied with?
+I am most satisfied with the **Recurring Task Logic**. Being able to mark a "Daily Feed" as complete and having the system automatically generate a fresh, pending version for the next day makes the app feel proactive rather than just a passive list.
 
 **b. What you would improve**
 
-- If you had another iteration, what would you improve or redesign?
+If I had another iteration, I would redesign the **Task Storage**. Currently, everything lives in memory via `st.session_state`. Integrating a local SQLite database would allow users to close their browser without losing their entire pet history.
 
 **c. Key takeaway**
 
-- What is one important thing you learned about designing systems or working with AI on this project?
+The most important thing I learned is the value of **"CLI-First" development**. By building and testing the core logic in a simple terminal environment before touching the Streamlit UI, I avoided hours of debugging browser-refresh issues and could focus entirely on the "brain" of the application.

@@ -1,6 +1,6 @@
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta
-from typing import List
+from dataclasses import dataclass, field, replace
+from datetime import datetime, timedelta, date
+from typing import List, Optional
 
 
 def _parse_time(time_str: str) -> datetime:
@@ -21,11 +21,18 @@ class Task:
     priority: int       # 1 = highest, 3 = lowest
     category: str
     is_completed: bool = False
-    pet_name: str = ""  # Stamped automatically by Pet.add_task()
+    pet_name: str = ""      # Stamped automatically by Pet.add_task()
+    frequency: str = "Once" # "Once", "Daily", "Weekly"
+    date: str = ""          # "YYYY-MM-DD"; empty means today
 
-    def mark_complete(self) -> None:
-        """Mark this task as completed."""
+    def mark_complete(self, pet: Optional["Pet"] = None) -> None:
+        """Mark this task done; if recurring, schedule the next occurrence on the pet."""
         self.is_completed = True
+        if self.frequency in ("Daily", "Weekly") and pet is not None:
+            base = date.fromisoformat(self.date) if self.date else date.today()
+            delta = timedelta(days=1) if self.frequency == "Daily" else timedelta(weeks=1)
+            next_task = replace(self, date=(base + delta).isoformat(), is_completed=False)
+            pet.add_task(next_task)
 
 
 @dataclass
@@ -56,13 +63,20 @@ class Owner:
 
 class Scheduler:
 
-    def generate_daily_plan(self, owner: Owner) -> List[Task]:
-        """Return all of the owner's tasks sorted by priority and start time."""
-        return self.sort_tasks_by_priority(owner.get_all_tasks())
+    def generate_daily_plan(self, owner: Owner, include_completed: bool = True) -> List[Task]:
+        """Return the owner's tasks sorted; pass include_completed=False for a pending-only view."""
+        tasks = owner.get_all_tasks()
+        if not include_completed:
+            tasks = self.filter_tasks(tasks, show_completed=False)
+        return self.sort_tasks_by_priority(tasks)
 
     def sort_tasks_by_priority(self, tasks: List[Task]) -> List[Task]:
-        """Sort tasks by priority (1 first), breaking ties by start time."""
-        return sorted(tasks, key=lambda t: (t.priority, _parse_time(t.time)))
+        """Sort by completed status (pending first), then priority (1 first), then start time."""
+        return sorted(tasks, key=lambda t: (t.is_completed, t.priority, _parse_time(t.time)))
+
+    def filter_tasks(self, tasks: List[Task], show_completed: bool = False) -> List[Task]:
+        """Return only tasks whose completed status matches show_completed."""
+        return [t for t in tasks if t.is_completed == show_completed]
 
     def detect_conflicts(self, tasks: List[Task]) -> List[tuple]:
         """Return pairs of tasks that overlap in time for the same pet."""
