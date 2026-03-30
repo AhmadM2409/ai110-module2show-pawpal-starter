@@ -2,17 +2,18 @@
 
 ## 1. System Design
 
+**Core User Actions:**
+1. **Profile Management**: Entering and storing basic owner and pet profiles.
+2. **Task Entry & Customization**: Adding or editing pet care tasks with specific durations and priority levels.
+3. **Daily Plan Generation**: Producing an optimized daily schedule that respects time constraints and priorities.
+
 **a. Initial design**
 
 - Briefly describe your initial UML design.
 - What classes did you include, and what responsibilities did you assign to each?
 
 **b. Design changes**
-
-- Did your design change during implementation?
-- If yes, describe at least one change and why you made it.
-
----
+...
 
 ## 2. Scheduling Logic and Tradeoffs
 
